@@ -1,0 +1,217 @@
+/*!
+ * @file        Arduino_NTC_Interface.ino
+ * @brief       Interfacing NTC Thermistor With Arduino
+ * @author      Jobit Joseph
+ * @copyright   Copyright (c) 2022 Semicon Media Pvt Ltd (https://circuitdigest.com)
+ */
+
+#include <Arduino.h>
+#include <Wire.h>
+
+#define ntc_pin A0         // Pin,to which the voltage divider is connected
+#define vd_power_pin 2        // 5V for the voltage divider
+#define nominal_resistance 100000.0       //Nominal resistance at 25⁰C
+#define nominal_temeprature 25.0   // temperature for nominal resistance (almost always 25⁰ C)
+#define samplingrate 5    // Number of samples
+#define beta 3950.0  // The beta coefficient or the B value of the thermistor (usually 3000-4000) check the datasheet for the accurate value.
+
+
+#define Rref 100000   //Value of  resistor used for the voltage divider
+
+
+void setup(void) {
+
+
+  pinMode(vd_power_pin, OUTPUT);
+
+
+  Serial.begin(115200);   //initialize serial communication at a baud rate of 9600
+
+
+}
+
+int Vin = 5.15;
+float Vout = 0;
+float R1 = 100000;
+float R2 = 0;
+float buffer = 0;
+
+void loop(void) {
+  // take voltage readings from the voltage divider
+  float average = 0;
+  int samples = 0;
+  for (uint8_t i = 0; i < samplingrate; i++) {
+    samples += analogRead(ntc_pin);
+    delay(10);
+  }
+  average = samples / samplingrate;
+  // average = analogRead(ntc_pin);
+
+  Serial.print("ADC readings ");
+  Serial.println(average);
+
+  buffer = average * Vin;
+  Vout = (buffer)/1023.0;
+
+  Serial.print("ADC Vout ");
+  Serial.println(Vout);
+
+  buffer = (Vin/Vout) - 1;
+  R2= R1 * buffer;
+
+  // Calculate NTC resistance
+  Serial.print("Thermistor resistance ");
+  Serial.println(R2);
+
+
+  float temperature;
+  temperature = R2 / nominal_resistance;     // (R/Ro)
+  temperature = log(temperature);                  // ln(R/Ro)
+  temperature /= beta;                   // 1/B * ln(R/Ro)
+  temperature += 1.0 / (nominal_temeprature + 273.15); // + (1/To)
+  temperature = 1.0 / temperature;                 // Invert
+  temperature -= 273.15;                         // convert absolute temp to C
+
+  Serial.print("Temperature ");
+  Serial.print(temperature);
+  Serial.println(" *C");
+  delay(1000);
+}
+
+
+
+
+  // millis_now = millis();
+  // if(millis_now - millis_before_2 > pid_refresh_rate){    //Refresh rate of the PID
+
+
+
+  //     millis_before_2 = millis(); 
+  //   }//End of running_mode = 1
+    
+
+  //   //Mode 10 is between reflow and cooldown
+  //   if(running_mode == 10){
+  //     lcd.clear();
+  //     lcd.setCursor(0,1);     
+  //     lcd.print("    COMPLETE    ");
+  //     tone(buzzer, 1800, 1000);    
+  //     seconds = 0;              //Reset timer
+  //     running_mode = 11;
+  //     delay(3000);
+  //   }
+
+  // }//End of > millis_before_2 (Refresh rate of the PID code)
+ 
+  // millis_now = millis();
+  // if(millis_now - millis_before > refresh_rate){          //Refresh rate of prntiong on the LCD
+  //   millis_before = millis();   
+  //   seconds = seconds + (refresh_rate/1000);              //We count time in seconds
+
+  //   //Mode 0 is with SSR OFF (we can selcet mode with buttons)
+  //   if(running_mode == 0){ 
+  //     digitalWrite(SSR, HIGH);        //With HIGH the SSR is OFF
+  //     lcd.clear();
+  //     lcd.setCursor(0,0);     
+  //     lcd.print("T: ");
+  //     lcd.print(temperature,1);   
+  //     lcd.setCursor(9,0);      
+  //     lcd.print("SSR OFF"); 
+
+  //     lcd.setCursor(0,1);  
+  //     if(selected_mode == 0){
+  //       lcd.print("Select Mode");     
+  //     }
+  //     else if(selected_mode == 1){
+  //       lcd.print("MODE 1");     
+  //     }
+  //     else if(selected_mode == 2){
+  //       lcd.print("MODE 2");     
+  //     }
+  //     else if(selected_mode == 3){
+  //       lcd.print("MODE 3");     
+  //     }
+  //   }//End of running_mode = 0
+  //   //Mode 11 is cooldown. SSR is OFF
+  //    else if(running_mode == 11){ 
+  //     if(temperature < cooldown_temp){
+  //       running_mode = 0; 
+  //       tone(buzzer, 1000, 100); 
+  //     }
+  //     digitalWrite(SSR, HIGH);        //With HIGH the SSR is OFF 
+  //     lcd.clear();
+  //     lcd.setCursor(0,0);     
+  //     lcd.print("T: ");
+  //     lcd.print(temperature,1);   
+  //     lcd.setCursor(9,0);      
+  //     lcd.print("SSR OFF"); 
+  //     lcd.setCursor(0,1);       
+  //     lcd.print("    COOLDOWN    ");  
+  //   }//end of running_mode == 11
+  //   //Mode 1 is the PID runnind with selected mode 1
+  //   else if(running_mode == 1){            
+  //     lcd.clear();
+  //     lcd.setCursor(0,0);     
+  //     lcd.print("T: ");
+  //     lcd.print(temperature,1);  
+  //     lcd.setCursor(9,0);       
+  //     lcd.print("SSR ON"); 
+  //     lcd.setCursor(0,1); 
+  //     lcd.print("S");  lcd.print(temp_setpoint,0); 
+  //     lcd.setCursor(5,1);     
+  //     lcd.print("PWM");  lcd.print(pwm_value,0); 
+  //     lcd.setCursor(12,1); 
+  //     lcd.print(seconds,0);  
+  //     lcd.print("s");         
+  //   }//End of running_mode == 1
+  // }
+
+  // ///////////////////////Button detection////////////////////////////
+  // ///////////////////////////////////////////////////////////////////
+  // if(!digitalRead(but_3) && but_3_state){
+  //   but_3_state = false;
+  //   selected_mode ++;   
+  //   tone(buzzer, 2300, 40);  
+  //   if(selected_mode > max_modes){
+  //     selected_mode = 0;
+  //   }
+  //   delay(150);
+  // }
+  // else if(digitalRead(but_3) && !but_3_state){
+  //   but_3_state = true;
+  // }
+  
+  // ///////////////////////////////////////////////////////////////////
+  // ///////////////////////////////////////////////////////////////////
+  // if(!digitalRead(but_4) && but_4_state){
+  //   if(running_mode == 1){
+  //     digitalWrite(SSR, HIGH);        //With HIGH the SSR is OFF
+  //     running_mode = 0;
+  //     selected_mode = 0; 
+  //     tone(buzzer, 2500, 150);
+  //     delay(130);
+  //     tone(buzzer, 2200, 150);
+  //     delay(130);
+  //     tone(buzzer, 2000, 150);
+  //     delay(130);
+  //   }
+
+  //   but_4_state = false;
+  //   if(selected_mode == 0){
+  //     running_mode = 0;
+  //   }
+  //   else if(selected_mode == 1){
+  //     running_mode = 1;
+  //     tone(buzzer, 2000, 150);
+  //     delay(130);
+  //     tone(buzzer, 2200, 150);
+  //     delay(130);
+  //     tone(buzzer, 2400, 150);
+  //     delay(130);
+  //     seconds = 0;                    //Reset timer
+  //   }
+  // }
+  // else if(digitalRead(but_4) && !but_4_state){
+  //   but_4_state = true;
+    
+  // }
